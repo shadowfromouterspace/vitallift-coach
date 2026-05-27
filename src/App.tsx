@@ -34,7 +34,7 @@ type Meal = {
 
 type Goal = "cut" | "recompose" | "bulk";
 
-type Section = "today" | "training" | "nutrition" | "coach";
+type Section = "today" | "progress" | "training" | "nutrition" | "coach";
 
 type AuthMode = "signIn" | "signUp" | "confirm";
 
@@ -90,6 +90,15 @@ const dailyPlans = [
   }
 ];
 
+const mealHistory = [
+  { day: "Thu", calories: 2180, protein: 148 },
+  { day: "Fri", calories: 2360, protein: 156 },
+  { day: "Sat", calories: 2040, protein: 132 },
+  { day: "Sun", calories: 2510, protein: 169 },
+  { day: "Mon", calories: 2290, protein: 151 },
+  { day: "Tue", calories: 2415, protein: 158 }
+];
+
 function macroTargets(weightKg: number, goal: Goal) {
   const goalMultiplier = goal === "cut" ? 29 : goal === "bulk" ? 38 : 33;
   const calories = Math.round(weightKg * goalMultiplier);
@@ -138,6 +147,20 @@ function App() {
 
   const readiness = Math.min(98, Math.max(58, 72 + (targets.protein - Math.abs(targets.protein - totals.protein)) / 8));
   const newMealCalories = protein * 4 + carbs * 4 + fats * 9;
+  const progressMeals = [...mealHistory, { day: "Today", calories: totals.calories, protein: totals.protein }];
+  const maxCalories = Math.max(...progressMeals.map((entry) => entry.calories), targets.calories);
+  const workoutVolumes = trainingPlan.map((item) => ({
+    day: item.day,
+    title: item.title,
+    sets: Number.parseInt(item.volume, 10)
+  }));
+  const maxSets = Math.max(...workoutVolumes.map((entry) => entry.sets));
+  const macroCompletion = [
+    { label: "Protein", value: totals.protein, target: targets.protein },
+    { label: "Carbs", value: totals.carbs, target: targets.carbs },
+    { label: "Fats", value: totals.fats, target: targets.fats },
+    { label: "Calories", value: totals.calories, target: targets.calories }
+  ];
 
   useEffect(() => {
     if (!isAuthConfigured) {
@@ -282,6 +305,7 @@ function App() {
         </div>
         <nav>
           <a className={activeSection === "today" ? "active" : ""} href="#today" onClick={() => setActiveSection("today")}><BarChart3 size={18} /> Today</a>
+          <a className={activeSection === "progress" ? "active" : ""} href="#progress" onClick={() => setActiveSection("progress")}><TrendingUp size={18} /> Progress</a>
           <a className={activeSection === "training" ? "active" : ""} href="#training" onClick={() => setActiveSection("training")}><Dumbbell size={18} /> Training</a>
           <a className={activeSection === "nutrition" ? "active" : ""} href="#nutrition" onClick={() => setActiveSection("nutrition")}><Utensils size={18} /> Nutrition</a>
           <a className={activeSection === "coach" ? "active" : ""} href="#coach" onClick={() => setActiveSection("coach")}><Sparkles size={18} /> Coach</a>
@@ -404,6 +428,64 @@ function App() {
             </form>
           )}
           {authMessage && <p className="auth-message">{authMessage}</p>}
+        </section>
+
+        <section id="progress" className="progress-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Progress</p>
+              <h3>Meals and workouts</h3>
+            </div>
+            <TrendingUp size={20} />
+          </div>
+
+          <div className="progress-grid">
+            <article className="progress-block">
+              <div className="chart-heading">
+                <strong>Calorie trend</strong>
+                <span>{Math.round((totals.calories / targets.calories) * 100)}% today</span>
+              </div>
+              <div className="bar-chart" aria-label="Calories by day">
+                {progressMeals.map((entry) => (
+                  <div className="bar-column" key={entry.day}>
+                    <span style={{ height: `${Math.max(12, (entry.calories / maxCalories) * 100)}%` }} />
+                    <small>{entry.day}</small>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="progress-block">
+              <div className="chart-heading">
+                <strong>Workout volume</strong>
+                <span>{workoutVolumes.reduce((sum, entry) => sum + entry.sets, 0)} weekly sets</span>
+              </div>
+              <div className="volume-list" aria-label="Workout sets by day">
+                {workoutVolumes.map((entry) => (
+                  <div className="volume-row" key={entry.day}>
+                    <span>{entry.day}</span>
+                    <div><i style={{ width: `${(entry.sets / maxSets) * 100}%` }} /></div>
+                    <strong>{entry.sets}</strong>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="macro-progress-strip">
+            {macroCompletion.map((entry) => {
+              const progress = Math.min(100, Math.round((entry.value / entry.target) * 100));
+              return (
+                <article key={entry.label}>
+                  <div>
+                    <strong>{entry.label}</strong>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
+                </article>
+              );
+            })}
+          </div>
         </section>
 
         <section className="two-column">
