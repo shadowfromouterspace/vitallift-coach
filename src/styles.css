@@ -290,7 +290,8 @@ h3 {
 .macro-card,
 .nutrition-panel,
 .training-panel,
-.coach-panel {
+.coach-panel,
+.account-panel {
   border-radius: 8px;
   background: rgba(255, 255, 250, 0.8);
   border: 1px solid rgba(37, 58, 45, 0.1);
@@ -348,7 +349,8 @@ h3 {
 
 .nutrition-panel,
 .training-panel,
-.coach-panel {
+.coach-panel,
+.account-panel {
   padding: 22px;
 }
 
@@ -370,6 +372,74 @@ h3 {
   gap: 12px;
   padding-bottom: 18px;
   border-bottom: 1px solid rgba(33, 50, 40, 0.1);
+}
+
+.account-panel {
+  margin-bottom: 18px;
+}
+
+.auth-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.auth-form button,
+.signed-in-row button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #20352b;
+  color: #f8fff8;
+  font-weight: 760;
+}
+
+.auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.auth-switcher {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-switcher button {
+  min-height: 34px;
+  background: #e8eee2;
+  color: #315c43;
+  box-shadow: none;
+}
+
+.auth-message {
+  margin: 14px 0 0;
+  color: #315c43;
+  line-height: 1.5;
+  font-weight: 760;
+}
+
+.signed-in-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.signed-in-row strong,
+.signed-in-row span {
+  display: block;
+}
+
+.signed-in-row span {
+  margin-top: 4px;
+  color: #637269;
 }
 
 label {
@@ -700,7 +770,8 @@ input:focus {
   .metrics-grid,
   .tip-grid,
   .macro-inputs,
-  .goal-controls {
+  .goal-controls,
+  .auth-form {
     grid-template-columns: 1fr;
   }
 
