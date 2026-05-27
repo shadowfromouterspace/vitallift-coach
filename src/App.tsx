@@ -32,6 +32,8 @@ type Meal = {
 
 type Goal = "cut" | "recompose" | "bulk";
 
+type Section = "today" | "training" | "nutrition" | "coach";
+
 const initialMeals: Meal[] = [
   { id: 1, name: "Greek yogurt, berries, oats", protein: 32, carbs: 54, fats: 9, calories: 425 },
   { id: 2, name: "Chicken bowl with avocado", protein: 48, carbs: 68, fats: 22, calories: 665 },
@@ -52,6 +54,36 @@ const tips = [
   "Sleep is part of the program: protect a fixed wind-down time tonight."
 ];
 
+const dailyPlans = [
+  {
+    chip: "Wednesday plan",
+    title: "Recomposition day with upper-body strength bias.",
+    copy: "Your meals are protein-forward and training volume is high enough to progress without burying recovery.",
+    goal: "recompose" as Goal,
+    protein: 35,
+    carbs: 45,
+    fats: 14
+  },
+  {
+    chip: "Strength block",
+    title: "Lower-body power day with higher carbohydrate support.",
+    copy: "The coach moved more fuel around training so your top sets feel explosive without pushing calories too high.",
+    goal: "bulk" as Goal,
+    protein: 42,
+    carbs: 78,
+    fats: 18
+  },
+  {
+    chip: "Recovery cut",
+    title: "Calorie-controlled day with low-impact conditioning.",
+    copy: "Protein stays high, carbs tighten slightly, and the workout shifts toward clean technique plus steps.",
+    goal: "cut" as Goal,
+    protein: 46,
+    carbs: 34,
+    fats: 12
+  }
+];
+
 function macroTargets(weightKg: number, goal: Goal) {
   const goalMultiplier = goal === "cut" ? 29 : goal === "bulk" ? 38 : 33;
   const calories = Math.round(weightKg * goalMultiplier);
@@ -62,6 +94,11 @@ function macroTargets(weightKg: number, goal: Goal) {
 }
 
 function App() {
+  const [activeSection, setActiveSection] = useState<Section>("today");
+  const [planIndex, setPlanIndex] = useState(0);
+  const [workoutStarted, setWorkoutStarted] = useState(false);
+  const [selectedTip, setSelectedTip] = useState(0);
+  const [targetPulse, setTargetPulse] = useState(false);
   const [weightKg, setWeightKg] = useState(78);
   const [goal, setGoal] = useState<Goal>("recompose");
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
@@ -71,6 +108,7 @@ function App() {
   const [fats, setFats] = useState(14);
 
   const targets = useMemo(() => macroTargets(weightKg, goal), [weightKg, goal]);
+  const plan = dailyPlans[planIndex];
   const totals = useMemo(
     () =>
       meals.reduce(
@@ -93,6 +131,36 @@ function App() {
     const name = mealName.trim() || "Custom performance meal";
     setMeals([{ id: Date.now(), name, protein, carbs, fats, calories: newMealCalories }, ...meals]);
     setMealName("");
+    setActiveSection("nutrition");
+  }
+
+  function showSection(section: Section) {
+    setActiveSection(section);
+    document.getElementById(section)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function generateNextPlan() {
+    const nextIndex = (planIndex + 1) % dailyPlans.length;
+    const nextPlan = dailyPlans[nextIndex];
+    setPlanIndex(nextIndex);
+    setGoal(nextPlan.goal);
+    setProtein(nextPlan.protein);
+    setCarbs(nextPlan.carbs);
+    setFats(nextPlan.fats);
+    setWorkoutStarted(false);
+    setSelectedTip(nextIndex % tips.length);
+    showSection("today");
+  }
+
+  function adjustTargets() {
+    setTargetPulse(true);
+    showSection("training");
+    window.setTimeout(() => setTargetPulse(false), 900);
+  }
+
+  function startWorkout() {
+    setWorkoutStarted((started) => !started);
+    showSection("training");
   }
 
   return (
@@ -103,10 +171,10 @@ function App() {
           <span>VitalLift</span>
         </div>
         <nav>
-          <a className="active" href="#today"><BarChart3 size={18} /> Today</a>
-          <a href="#training"><Dumbbell size={18} /> Training</a>
-          <a href="#nutrition"><Utensils size={18} /> Nutrition</a>
-          <a href="#coach"><Sparkles size={18} /> Coach</a>
+          <a className={activeSection === "today" ? "active" : ""} href="#today" onClick={() => setActiveSection("today")}><BarChart3 size={18} /> Today</a>
+          <a className={activeSection === "training" ? "active" : ""} href="#training" onClick={() => setActiveSection("training")}><Dumbbell size={18} /> Training</a>
+          <a className={activeSection === "nutrition" ? "active" : ""} href="#nutrition" onClick={() => setActiveSection("nutrition")}><Utensils size={18} /> Nutrition</a>
+          <a className={activeSection === "coach" ? "active" : ""} href="#coach" onClick={() => setActiveSection("coach")}><Sparkles size={18} /> Coach</a>
         </nav>
         <div className="coach-note">
           <Moon size={18} />
@@ -121,7 +189,7 @@ function App() {
             <p className="eyebrow">Nutritional coaching workspace</p>
             <h1>Build muscle, track macros, recover clean.</h1>
           </div>
-          <button className="primary-action">
+          <button className="primary-action" type="button" onClick={generateNextPlan}>
             <Sparkles size={18} />
             Generate next plan
           </button>
@@ -129,14 +197,16 @@ function App() {
 
         <section id="today" className="hero-panel">
           <div className="hero-copy">
-            <span className="date-chip"><CalendarDays size={16} /> Wednesday plan</span>
-            <h2>Recomposition day with upper-body strength bias.</h2>
+            <span className="date-chip"><CalendarDays size={16} /> {plan.chip}</span>
+            <h2>{plan.title}</h2>
             <p>
-              Your meals are protein-forward and training volume is high enough to progress without burying recovery.
+              {plan.copy}
             </p>
             <div className="hero-actions">
-              <button><Target size={17} /> Adjust targets</button>
-              <button className="ghost"><Timer size={17} /> Start workout</button>
+              <button type="button" onClick={adjustTargets}><Target size={17} /> Adjust targets</button>
+              <button className="ghost" type="button" onClick={startWorkout}>
+                <Timer size={17} /> {workoutStarted ? "Pause workout" : "Start workout"}
+              </button>
             </div>
           </div>
           <div className="vital-orbit" aria-label="Daily readiness score">
@@ -194,7 +264,7 @@ function App() {
             </div>
           </div>
 
-          <div id="training" className="training-panel">
+          <div id="training" className={`training-panel ${targetPulse ? "pulse-panel" : ""}`}>
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Weightlifting</p>
@@ -202,6 +272,13 @@ function App() {
               </div>
               <TrendingUp size={20} />
             </div>
+            {workoutStarted && (
+              <div className="workout-status">
+                <Timer size={18} />
+                <span>Workout active</span>
+                <strong>Upper Strength</strong>
+              </div>
+            )}
             <div className="goal-controls">
               <label>
                 Body weight
@@ -218,7 +295,10 @@ function App() {
                   <button
                     key={item}
                     className={goal === item ? "selected" : ""}
-                    onClick={() => setGoal(item)}
+                    onClick={() => {
+                      setGoal(item);
+                      setActiveSection("training");
+                    }}
                     type="button"
                   >
                     {item}
@@ -251,14 +331,22 @@ function App() {
             <h3>Next best actions</h3>
           </div>
           <div className="tip-grid">
-            {tips.map((tip) => (
-              <article key={tip}>
+            {tips.map((tip, index) => (
+              <article
+                key={tip}
+                className={selectedTip === index ? "selected-tip" : ""}
+                onClick={() => {
+                  setSelectedTip(index);
+                  setActiveSection("coach");
+                }}
+              >
                 <Check size={18} />
                 <p>{tip}</p>
                 <ChevronRight size={17} />
               </article>
             ))}
           </div>
+          <p className="coach-selection">Selected focus: {tips[selectedTip]}</p>
         </section>
       </section>
     </main>
