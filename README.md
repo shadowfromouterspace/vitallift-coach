@@ -10,13 +10,21 @@ Premium nutritional coaching web app for weightlifting, exercise planning, food 
 - Weightlifting split view with weekly structure
 - Coaching tips panel for next actions
 - AWS Amplify hosting config
-- AWS SAM template for a future serverless API with DynamoDB and Lambda
+- AWS SAM template for Cognito user accounts, DynamoDB, API Gateway, and Lambda
 
 ## Local development
 
 ```bash
 npm install
 npm run dev
+```
+
+For local Cognito auth, create `.env.local` after deploying the backend:
+
+```bash
+VITE_AWS_REGION=us-east-1
+VITE_COGNITO_USER_POOL_ID=<CognitoUserPoolId>
+VITE_COGNITO_USER_POOL_CLIENT_ID=<CognitoUserPoolClientId>
 ```
 
 ## Build
@@ -30,12 +38,20 @@ npm run build
 1. Use AWS Amplify Hosting for the frontend.
 2. Connect Amplify to this GitHub repository.
 3. Amplify will use `amplify.yml` and publish the `dist` folder.
-4. Deploy the backend with AWS SAM when you are ready for cloud persistence:
+4. Deploy the backend with AWS SAM when you are ready for user accounts and cloud persistence:
 
 ```bash
 cd infrastructure
 sam build
 sam deploy --guided
+```
+
+5. Copy the `CognitoUserPoolId` and `CognitoUserPoolClientId` outputs into Amplify environment variables:
+
+```bash
+VITE_AWS_REGION=<your-aws-region>
+VITE_COGNITO_USER_POOL_ID=<CognitoUserPoolId>
+VITE_COGNITO_USER_POOL_CLIENT_ID=<CognitoUserPoolClientId>
 ```
 
 Recommended next AWS resources:
