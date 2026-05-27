@@ -38,6 +38,8 @@ type Section = "today" | "training" | "nutrition" | "coach";
 
 type AuthMode = "signIn" | "signUp" | "confirm";
 
+const localAccountKey = "vitallift-local-account";
+
 const initialMeals: Meal[] = [
   { id: 1, name: "Greek yogurt, berries, oats", protein: 32, carbs: 54, fats: 9, calories: 425 },
   { id: 2, name: "Chicken bowl with avocado", protein: 48, carbs: 68, fats: 22, calories: 665 },
@@ -114,7 +116,7 @@ function App() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authCode, setAuthCode] = useState("");
-  const [authMessage, setAuthMessage] = useState(isAuthConfigured ? "" : "Deploy Cognito and set the VITE_COGNITO_* variables to enable real account creation.");
+  const [authMessage, setAuthMessage] = useState(isAuthConfigured ? "" : "Local demo mode is active. Deploy Cognito and set VITE_COGNITO_* variables for real cloud accounts.");
   const [authBusy, setAuthBusy] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
 
@@ -139,6 +141,12 @@ function App() {
 
   useEffect(() => {
     if (!isAuthConfigured) {
+      const localAccount = window.localStorage.getItem(localAccountKey);
+      if (localAccount) {
+        setCurrentUser(localAccount);
+        setAuthEmail(localAccount);
+        setAuthMessage("Signed in with a local demo account. Cloud accounts activate after Cognito is configured.");
+      }
       return;
     }
 
@@ -191,7 +199,23 @@ function App() {
     event.preventDefault();
 
     if (!isAuthConfigured) {
-      setAuthMessage("AWS Cognito is not configured yet. Deploy the infrastructure, then add the Cognito outputs as Vite environment variables.");
+      const normalizedEmail = authEmail.trim().toLowerCase();
+
+      if (!normalizedEmail) {
+        setAuthMessage("Enter an email to create or use a local demo account.");
+        return;
+      }
+
+      if (authMode === "confirm") {
+        setAuthMode("signIn");
+        setAuthMessage("Local demo accounts do not need email confirmation. You can sign in now.");
+        return;
+      }
+
+      window.localStorage.setItem(localAccountKey, normalizedEmail);
+      setCurrentUser(normalizedEmail);
+      setAuthEmail(normalizedEmail);
+      setAuthMessage(authMode === "signUp" ? "Local demo account created. Your test profile is active on this browser." : "Signed in with your local demo account.");
       return;
     }
 
@@ -236,6 +260,10 @@ function App() {
 
   async function handleSignOut() {
     if (!isAuthConfigured) {
+      window.localStorage.removeItem(localAccountKey);
+      setCurrentUser("");
+      setAuthMode("signIn");
+      setAuthMessage("Signed out from the local demo account.");
       return;
     }
 
