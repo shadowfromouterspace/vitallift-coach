@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless backend for VitalLift Coach.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 10
+    MemorySize: 256
+    Architectures:
+      - arm64
+
+Resources:
+  NutritionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: entryId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: entryId
+          KeyType: RANGE
+
+  VitalLiftApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - content-type
+          - authorization
+
+  CoachFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/lambda
+      Handler: index.handler
+      Environment:
+        Variables:
+          NUTRITION_TABLE: !Ref NutritionTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NutritionTable
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref VitalLiftApi
+            Path: /health
+            Method: GET
+        CoachTip:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref VitalLiftApi
+            Path: /coach/tip
+            Method: GET
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API endpoint
+    Value: !Sub "https://${VitalLiftApi}.execute-api.${AWS::Region}.amazonaws.com"
