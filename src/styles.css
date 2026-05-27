@@ -291,7 +291,8 @@ h3 {
 .nutrition-panel,
 .training-panel,
 .coach-panel,
-.account-panel {
+.account-panel,
+.progress-panel {
   border-radius: 8px;
   background: rgba(255, 255, 250, 0.8);
   border: 1px solid rgba(37, 58, 45, 0.1);
@@ -350,7 +351,8 @@ h3 {
 .nutrition-panel,
 .training-panel,
 .coach-panel,
-.account-panel {
+.account-panel,
+.progress-panel {
   padding: 22px;
 }
 
@@ -376,6 +378,131 @@ h3 {
 
 .account-panel {
   margin-bottom: 18px;
+}
+
+.progress-panel {
+  margin-bottom: 18px;
+}
+
+.progress-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 14px;
+}
+
+.progress-block {
+  min-height: 270px;
+  display: grid;
+  align-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 8px;
+  background: #fbfcf7;
+  border: 1px solid rgba(33, 50, 40, 0.09);
+}
+
+.chart-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.chart-heading strong {
+  color: #1b2922;
+}
+
+.chart-heading span {
+  color: #56705f;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.bar-chart {
+  height: 190px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: end;
+  gap: 10px;
+}
+
+.bar-column {
+  height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.bar-column span {
+  width: 100%;
+  display: block;
+  align-self: end;
+  border-radius: 8px 8px 3px 3px;
+  background: linear-gradient(180deg, #7fb069, #1f6f45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.bar-column small {
+  color: #637269;
+  font-weight: 760;
+  text-align: center;
+  font-size: 0.76rem;
+}
+
+.volume-list {
+  display: grid;
+  gap: 14px;
+}
+
+.volume-row {
+  display: grid;
+  grid-template-columns: 42px 1fr 38px;
+  align-items: center;
+  gap: 12px;
+}
+
+.volume-row span,
+.volume-row strong {
+  color: #315c43;
+  font-weight: 850;
+}
+
+.volume-row div {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dde7d6;
+}
+
+.volume-row i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #20352b, #7fb069);
+}
+
+.macro-progress-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.macro-progress-strip article {
+  padding: 14px;
+  border-radius: 8px;
+  background: #fbfcf7;
+  border: 1px solid rgba(33, 50, 40, 0.09);
+}
+
+.macro-progress-strip article > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #315c43;
 }
 
 .auth-form {
@@ -707,7 +834,8 @@ input:focus {
   }
 
   .hero-panel,
-  .two-column {
+  .two-column,
+  .progress-grid {
     grid-template-columns: 1fr;
   }
 
@@ -769,6 +897,7 @@ input:focus {
 
   .metrics-grid,
   .tip-grid,
+  .macro-progress-strip,
   .macro-inputs,
   .goal-controls,
   .auth-form {
