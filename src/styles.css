@@ -505,6 +505,31 @@ input:focus {
   font-weight: 760;
 }
 
+.workout-status {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #20352b;
+  color: #edfff2;
+}
+
+.workout-status span {
+  color: #b9d8c1;
+  font-weight: 760;
+}
+
+.workout-status strong {
+  margin-left: auto;
+}
+
+.pulse-panel {
+  animation: targetPulse 900ms ease both;
+}
+
 .coach-panel {
   margin-top: 18px;
 }
@@ -524,11 +549,17 @@ input:focus {
   border-radius: 8px;
   background: #fbfcf7;
   transition: transform 180ms ease, border-color 180ms ease;
+  cursor: pointer;
 }
 
-.tip-grid article:hover {
+.tip-grid article:hover,
+.tip-grid .selected-tip {
   border-color: rgba(45, 122, 76, 0.36);
   transform: translateY(-3px);
+}
+
+.tip-grid .selected-tip {
+  background: #eef7e8;
 }
 
 .tip-grid p {
@@ -541,6 +572,13 @@ input:focus {
 .tip-grid svg {
   color: #2d7a4c;
   flex: 0 0 auto;
+}
+
+.coach-selection {
+  margin: 16px 0 0;
+  color: #315c43;
+  font-weight: 760;
+  line-height: 1.5;
 }
 
 @keyframes riseIn {
@@ -561,6 +599,18 @@ input:focus {
   }
   50% {
     transform: scale(1.035);
+  }
+}
+
+@keyframes targetPulse {
+  0% {
+    box-shadow: 0 14px 38px rgba(36, 54, 44, 0.08);
+  }
+  45% {
+    box-shadow: 0 0 0 5px rgba(45, 122, 76, 0.18), 0 20px 48px rgba(45, 122, 76, 0.16);
+  }
+  100% {
+    box-shadow: 0 14px 38px rgba(36, 54, 44, 0.08);
   }
 }
 
