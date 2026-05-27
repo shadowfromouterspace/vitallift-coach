@@ -19,7 +19,9 @@ import {
   Utensils,
   Waves
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { confirmSignUp, getCurrentUser, signIn, signOut, signUp } from "aws-amplify/auth";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { isAuthConfigured } from "./awsConfig";
 
 type Meal = {
   id: number;
@@ -33,6 +35,8 @@ type Meal = {
 type Goal = "cut" | "recompose" | "bulk";
 
 type Section = "today" | "training" | "nutrition" | "coach";
+
+type AuthMode = "signIn" | "signUp" | "confirm";
 
 const initialMeals: Meal[] = [
   { id: 1, name: "Greek yogurt, berries, oats", protein: 32, carbs: 54, fats: 9, calories: 425 },
@@ -106,6 +110,13 @@ function App() {
   const [protein, setProtein] = useState(35);
   const [carbs, setCarbs] = useState(45);
   const [fats, setFats] = useState(14);
+  const [authMode, setAuthMode] = useState<AuthMode>("signUp");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authCode, setAuthCode] = useState("");
+  const [authMessage, setAuthMessage] = useState(isAuthConfigured ? "" : "Deploy Cognito and set the VITE_COGNITO_* variables to enable real account creation.");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [currentUser, setCurrentUser] = useState("");
 
   const targets = useMemo(() => macroTargets(weightKg, goal), [weightKg, goal]);
   const plan = dailyPlans[planIndex];
@@ -125,6 +136,19 @@ function App() {
 
   const readiness = Math.min(98, Math.max(58, 72 + (targets.protein - Math.abs(targets.protein - totals.protein)) / 8));
   const newMealCalories = protein * 4 + carbs * 4 + fats * 9;
+
+  useEffect(() => {
+    if (!isAuthConfigured) {
+      return;
+    }
+
+    getCurrentUser()
+      .then((user) => {
+        setCurrentUser(user.signInDetails?.loginId || user.username);
+        setAuthMessage("Signed in and ready to save your coaching data.");
+      })
+      .catch(() => setCurrentUser(""));
+  }, []);
 
   function addMeal(event: FormEvent) {
     event.preventDefault();
@@ -161,6 +185,64 @@ function App() {
   function startWorkout() {
     setWorkoutStarted((started) => !started);
     showSection("training");
+  }
+
+  async function handleAuth(event: FormEvent) {
+    event.preventDefault();
+
+    if (!isAuthConfigured) {
+      setAuthMessage("AWS Cognito is not configured yet. Deploy the infrastructure, then add the Cognito outputs as Vite environment variables.");
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthMessage("");
+
+    try {
+      if (authMode === "signUp") {
+        await signUp({
+          username: authEmail,
+          password: authPassword,
+          options: {
+            userAttributes: {
+              email: authEmail
+            }
+          }
+        });
+        setAuthMode("confirm");
+        setAuthMessage("Account created. Check your email for the confirmation code.");
+      } else if (authMode === "confirm") {
+        await confirmSignUp({
+          username: authEmail,
+          confirmationCode: authCode
+        });
+        setAuthMode("signIn");
+        setAuthMessage("Email confirmed. Sign in to start saving your coaching profile.");
+      } else {
+        const result = await signIn({ username: authEmail, password: authPassword });
+        if (result.isSignedIn) {
+          setCurrentUser(authEmail);
+          setAuthMessage("Signed in and ready to save your coaching data.");
+        } else {
+          setAuthMessage(`Next step: ${result.nextStep.signInStep}`);
+        }
+      }
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Auth action failed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleSignOut() {
+    if (!isAuthConfigured) {
+      return;
+    }
+
+    await signOut();
+    setCurrentUser("");
+    setAuthMode("signIn");
+    setAuthMessage("Signed out.");
   }
 
   return (
@@ -226,6 +308,74 @@ function App() {
           <Macro label="Carbs" value={totals.carbs} target={targets.carbs} unit="g" icon={Apple} />
           <Macro label="Fats" value={totals.fats} target={targets.fats} unit="g" icon={Salad} />
           <Macro label="Calories" value={totals.calories} target={targets.calories} unit="kcal" icon={Flame} />
+        </section>
+
+        <section className="account-panel" aria-label="Account">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Account</p>
+              <h3>{currentUser ? "Profile connected" : authMode === "signUp" ? "Create your account" : authMode === "confirm" ? "Confirm email" : "Sign in"}</h3>
+            </div>
+            <Sparkles size={20} />
+          </div>
+          {currentUser ? (
+            <div className="signed-in-row">
+              <div>
+                <strong>{currentUser}</strong>
+                <span>Meals, macros, and training history can be linked to this profile.</span>
+              </div>
+              <button type="button" onClick={handleSignOut}>Sign out</button>
+            </div>
+          ) : (
+            <form className="auth-form" onSubmit={handleAuth}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              {authMode !== "confirm" && (
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    value={authPassword}
+                    onChange={(event) => setAuthPassword(event.target.value)}
+                    placeholder="Minimum 8 characters"
+                    autoComplete={authMode === "signUp" ? "new-password" : "current-password"}
+                    required
+                  />
+                </label>
+              )}
+              {authMode === "confirm" && (
+                <label>
+                  Confirmation code
+                  <input
+                    value={authCode}
+                    onChange={(event) => setAuthCode(event.target.value)}
+                    placeholder="123456"
+                    inputMode="numeric"
+                    required
+                  />
+                </label>
+              )}
+              <button type="submit" disabled={authBusy}>
+                <Sparkles size={17} />
+                {authBusy ? "Working..." : authMode === "signUp" ? "Create account" : authMode === "confirm" ? "Confirm account" : "Sign in"}
+              </button>
+              <div className="auth-switcher">
+                <button type="button" onClick={() => setAuthMode("signUp")}>Create account</button>
+                <button type="button" onClick={() => setAuthMode("signIn")}>Sign in</button>
+                <button type="button" onClick={() => setAuthMode("confirm")}>Confirm email</button>
+              </div>
+            </form>
+          )}
+          {authMessage && <p className="auth-message">{authMessage}</p>}
         </section>
 
         <section className="two-column">
