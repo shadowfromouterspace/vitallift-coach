@@ -45,6 +45,8 @@ type AuthMode = "signIn" | "signUp" | "confirm";
 
 type ProfileAlertStatus = "idle" | "saved" | "warning";
 
+type AuthTransition = "idle" | "signing-in" | "signing-out";
+
 type UserProfile = {
   fullName: string;
   birthDate: string;
@@ -153,6 +155,7 @@ function App() {
   const [authCode, setAuthCode] = useState("");
   const [authMessage, setAuthMessage] = useState(isAuthConfigured ? "" : "Local demo mode is active. Deploy Cognito and set VITE_COGNITO_* variables for real cloud accounts.");
   const [authBusy, setAuthBusy] = useState(false);
+  const [authTransition, setAuthTransition] = useState<AuthTransition>("idle");
   const [currentUser, setCurrentUser] = useState("");
   const [profile, setProfile] = useState<UserProfile>(emptyProfile);
   const [profileMessage, setProfileMessage] = useState("");
@@ -207,6 +210,15 @@ function App() {
       })
       .catch(() => setCurrentUser(""));
   }, []);
+
+  useEffect(() => {
+    if (authTransition === "idle") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setAuthTransition("idle"), authTransition === "signing-out" ? 760 : 900);
+    return () => window.clearTimeout(timeout);
+  }, [authTransition]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -357,6 +369,7 @@ function App() {
       }
 
       window.localStorage.setItem(localAccountKey, normalizedEmail);
+      setAuthTransition("signing-in");
       setCurrentUser(normalizedEmail);
       setAuthEmail(normalizedEmail);
       setAuthMessage(authMode === "signUp" ? "Local demo account created. Your test profile is active on this browser." : "Signed in with your local demo account.");
@@ -378,6 +391,7 @@ function App() {
       } else {
         const result = await signIn({ username: authEmail, password: authPassword });
         if (result.isSignedIn) {
+          setAuthTransition("signing-in");
           setCurrentUser(authEmail);
           setAuthMessage("Signed in and ready to save your coaching data.");
         } else {
@@ -392,6 +406,10 @@ function App() {
   }
 
   async function handleSignOut() {
+    setAuthBusy(true);
+    setAuthTransition("signing-out");
+    await waitForAccountTransition();
+
     if (!isAuthConfigured) {
       window.localStorage.removeItem(localAccountKey);
       setCurrentUser("");
@@ -400,16 +418,21 @@ function App() {
       setProfileAlertStatus("idle");
       setAuthMode("signIn");
       setAuthMessage("Signed out from the local demo account.");
+      setAuthBusy(false);
       return;
     }
 
-    await signOut();
-    setCurrentUser("");
-    setProfile(emptyProfile);
-    setProfileMessage("");
-    setProfileAlertStatus("idle");
-    setAuthMode("signIn");
-    setAuthMessage("Signed out.");
+    try {
+      await signOut();
+      setCurrentUser("");
+      setProfile(emptyProfile);
+      setProfileMessage("");
+      setProfileAlertStatus("idle");
+      setAuthMode("signIn");
+      setAuthMessage("Signed out.");
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   return (
@@ -453,19 +476,22 @@ function App() {
           <Macro label="Calories" value={totals.calories} target={targets.calories} unit="kcal" icon={Flame} />
         </section>
 
-        <section className="account-panel" aria-label="Account">
+        <section className={`account-panel ${authTransition}`} aria-label="Account">
           <div className="section-heading"><div><p className="eyebrow">Account</p><h3>{currentUser ? "Profile connected" : authMode === "signUp" ? "Create your account" : authMode === "confirm" ? "Confirm email" : "Sign in"}</h3></div><Sparkles size={20} /></div>
-          {currentUser ? (
-            <div className="signed-in-row"><div><strong>{currentUser}</strong><span>Meals, macros, and training history can be linked to this profile.</span></div><button type="button" onClick={handleSignOut}>Sign out</button></div>
-          ) : (
-            <form className="auth-form" onSubmit={handleAuth}>
-              <label>Email<input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" required /></label>
-              {authMode !== "confirm" && <label>Password<input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 8 characters" autoComplete={authMode === "signUp" ? "new-password" : "current-password"} required /></label>}
-              {authMode === "confirm" && <label>Confirmation code<input value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="123456" inputMode="numeric" required /></label>}
-              <button type="submit" disabled={authBusy}><Sparkles size={17} />{authBusy ? "Working..." : authMode === "signUp" ? "Create account" : authMode === "confirm" ? "Confirm account" : "Sign in"}</button>
-              <div className="auth-switcher"><button type="button" onClick={() => setAuthMode("signUp")}>Create account</button><button type="button" onClick={() => setAuthMode("signIn")}>Sign in</button><button type="button" onClick={() => setAuthMode("confirm")}>Confirm email</button></div>
-            </form>
-          )}
+          <AuthTransitionBanner status={authTransition} />
+          <div className="account-body">
+            {currentUser ? (
+              <div className="signed-in-row"><div><strong>{currentUser}</strong><span>Meals, macros, and training history can be linked to this profile.</span></div><button type="button" onClick={handleSignOut} disabled={authBusy}>{authTransition === "signing-out" ? "Signing out..." : "Sign out"}</button></div>
+            ) : (
+              <form className="auth-form" onSubmit={handleAuth}>
+                <label>Email<input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" required /></label>
+                {authMode !== "confirm" && <label>Password<input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 8 characters" autoComplete={authMode === "signUp" ? "new-password" : "current-password"} required /></label>}
+                {authMode === "confirm" && <label>Confirmation code<input value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="123456" inputMode="numeric" required /></label>}
+                <button type="submit" disabled={authBusy}><Sparkles size={17} />{authBusy ? "Working..." : authMode === "signUp" ? "Create account" : authMode === "confirm" ? "Confirm account" : "Sign in"}</button>
+                <div className="auth-switcher"><button type="button" onClick={() => setAuthMode("signUp")}>Create account</button><button type="button" onClick={() => setAuthMode("signIn")}>Sign in</button><button type="button" onClick={() => setAuthMode("confirm")}>Confirm email</button></div>
+              </form>
+            )}
+          </div>
           {authMessage && <p className="auth-message">{authMessage}</p>}
         </section>
 
@@ -553,6 +579,20 @@ function ProfileFact({ icon: Icon, label, value }: { icon: typeof Activity; labe
   return <article><Icon size={18} /><div><span>{label}</span><strong>{value}</strong></div></article>;
 }
 
+function AuthTransitionBanner({ status }: { status: AuthTransition }) {
+  if (status === "idle") {
+    return null;
+  }
+
+  const isSigningIn = status === "signing-in";
+  return (
+    <div className={`auth-transition-banner ${status}`} role="status" aria-live="polite">
+      {isSigningIn ? <Check size={17} /> : <Sparkles size={17} />}
+      <span>{isSigningIn ? "Account connected" : "Closing session"}</span>
+    </div>
+  );
+}
+
 function ProfileAvatar({ avatar, name, size = "compact" }: { avatar: string; name: string; size?: "compact" | "large" }) {
   const initials = name
     .split(/[\s@._-]+/)
@@ -585,6 +625,10 @@ function ProfileAlert({ status, message }: { status: ProfileAlertStatus; message
 
 function profileKey(user: string) {
   return `${profileStoragePrefix}:${user.toLowerCase()}`;
+}
+
+function waitForAccountTransition() {
+  return new Promise((resolve) => window.setTimeout(resolve, 420));
 }
 
 function resizeProfileImage(file: File) {
