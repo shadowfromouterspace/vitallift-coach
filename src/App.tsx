@@ -173,6 +173,8 @@ function App() {
   const maxCalories = Math.max(...progressMeals.map((entry) => entry.calories), targets.calories);
   const workoutVolumes = trainingPlan.map((item) => ({ day: item.day, title: item.title, sets: Number.parseInt(item.volume, 10) }));
   const maxSets = Math.max(...workoutVolumes.map((entry) => entry.sets));
+  const profileWeight = profile.weight ? `${profile.weight} kg` : "Weight not set";
+  const profileHeight = profile.height ? `${profile.height} cm` : "Height not set";
   const macroCompletion = [
     { label: "Protein", value: totals.protein, target: targets.protein },
     { label: "Carbs", value: totals.carbs, target: targets.carbs },
@@ -207,16 +209,23 @@ function App() {
     }
 
     const storedProfile = window.localStorage.getItem(profileKey(currentUser));
-    if (storedProfile) {
-      try {
-        const parsedProfile = JSON.parse(storedProfile) as UserProfile;
-        setProfile({ ...emptyProfile, ...parsedProfile });
-        if (parsedProfile.weight) {
-          setWeightKg(Number(parsedProfile.weight));
-        }
-      } catch {
-        setProfile(emptyProfile);
+    if (!storedProfile) {
+      setProfile(emptyProfile);
+      setProfileMessage("");
+      return;
+    }
+
+    try {
+      const parsedProfile = JSON.parse(storedProfile) as UserProfile;
+      setProfile({ ...emptyProfile, ...parsedProfile });
+      setProfileMessage("");
+
+      if (parsedProfile.weight) {
+        setWeightKg(Number(parsedProfile.weight));
       }
+    } catch {
+      setProfile(emptyProfile);
+      setProfileMessage("Profile data was reset because the saved local record could not be read.");
     }
   }, [currentUser]);
 
@@ -258,10 +267,18 @@ function App() {
   }
 
   function updateProfile(field: keyof UserProfile, value: string) {
-    setProfile((currentProfile) => ({ ...currentProfile, [field]: value }));
+    setProfile((currentProfile) => {
+      const nextProfile = { ...currentProfile, [field]: value };
+
+      if (currentUser) {
+        window.localStorage.setItem(profileKey(currentUser), JSON.stringify(nextProfile));
+      }
+
+      return nextProfile;
+    });
     setProfileMessage("");
 
-    if (field === "weight" && value) {
+    if (field === "weight" && Number(value) > 0) {
       setWeightKg(Number(value));
     }
   }
@@ -334,6 +351,8 @@ function App() {
     if (!isAuthConfigured) {
       window.localStorage.removeItem(localAccountKey);
       setCurrentUser("");
+      setProfile(emptyProfile);
+      setProfileMessage("");
       setAuthMode("signIn");
       setAuthMessage("Signed out from the local demo account.");
       return;
@@ -341,6 +360,8 @@ function App() {
 
     await signOut();
     setCurrentUser("");
+    setProfile(emptyProfile);
+    setProfileMessage("");
     setAuthMode("signIn");
     setAuthMessage("Signed out.");
   }
@@ -406,7 +427,7 @@ function App() {
           <div className="section-heading"><div><p className="eyebrow">Registered user</p><h3>User profile panel</h3></div><UserRound size={20} /></div>
           {currentUser ? (
             <>
-              <div className="profile-summary"><div className="profile-avatar"><UserRound size={24} /></div><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profile.weight || weightKg} kg · {profile.height || "Height not set"} cm</span></div></div>
+              <div className="profile-summary"><div className="profile-avatar"><UserRound size={24} /></div><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profileWeight} · {profileHeight}</span></div></div>
               <form className="profile-form" onSubmit={saveProfile}>
                 <label>Full name<input value={profile.fullName} onChange={(event) => updateProfile("fullName", event.target.value)} placeholder="e.g. Luis Santos" autoComplete="name" /></label>
                 <label>Date of birth<input type="date" value={profile.birthDate} onChange={(event) => updateProfile("birthDate", event.target.value)} /></label>
@@ -415,7 +436,7 @@ function App() {
                 <label className="profile-location">Location<input value={profile.location} onChange={(event) => updateProfile("location", event.target.value)} placeholder="Mexico City, MX" autoComplete="address-level2" /></label>
                 <button type="submit"><Save size={17} />Save profile</button>
               </form>
-              <div className="profile-facts" aria-label="Profile details"><ProfileFact icon={CalendarDays} label="Birth date" value={profile.birthDate || "Not set"} /><ProfileFact icon={Flame} label="Body weight" value={`${profile.weight || weightKg} kg`} /><ProfileFact icon={Ruler} label="Height" value={profile.height ? `${profile.height} cm` : "Not set"} /><ProfileFact icon={UserRound} label="Account" value={currentUser} /></div>
+              <div className="profile-facts" aria-label="Profile details"><ProfileFact icon={CalendarDays} label="Birth date" value={profile.birthDate || "Not set"} /><ProfileFact icon={Flame} label="Body weight" value={profileWeight} /><ProfileFact icon={Ruler} label="Height" value={profileHeight} /><ProfileFact icon={UserRound} label="Account" value={currentUser} /></div>
             </>
           ) : (
             <div className="profile-empty"><UserRound size={22} /><div><strong>Create an account to unlock the profile panel.</strong><span>The panel stores name, date of birth, weight, height, and location for the signed-in user.</span></div></div>
