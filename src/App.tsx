@@ -11,12 +11,15 @@ import {
   Leaf,
   Moon,
   Plus,
+  Ruler,
   Salad,
+  Save,
   Sparkles,
   Target,
   Timer,
   TrendingUp,
   Utensils,
+  UserRound,
   Waves
 } from "lucide-react";
 import { confirmSignUp, getCurrentUser, signIn, signOut, signUp } from "aws-amplify/auth";
@@ -34,11 +37,28 @@ type Meal = {
 
 type Goal = "cut" | "recompose" | "bulk";
 
-type Section = "today" | "progress" | "training" | "nutrition" | "coach";
+type Section = "today" | "profile" | "progress" | "training" | "nutrition" | "coach";
 
 type AuthMode = "signIn" | "signUp" | "confirm";
 
+type UserProfile = {
+  fullName: string;
+  birthDate: string;
+  weight: string;
+  height: string;
+  location: string;
+};
+
 const localAccountKey = "vitallift-local-account";
+const profileStoragePrefix = "vitallift-user-profile";
+
+const emptyProfile: UserProfile = {
+  fullName: "",
+  birthDate: "",
+  weight: "",
+  height: "",
+  location: ""
+};
 
 const initialMeals: Meal[] = [
   { id: 1, name: "Greek yogurt, berries, oats", protein: 32, carbs: 54, fats: 9, calories: 425 },
@@ -128,6 +148,8 @@ function App() {
   const [authMessage, setAuthMessage] = useState(isAuthConfigured ? "" : "Local demo mode is active. Deploy Cognito and set VITE_COGNITO_* variables for real cloud accounts.");
   const [authBusy, setAuthBusy] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
+  const [profile, setProfile] = useState<UserProfile>(emptyProfile);
+  const [profileMessage, setProfileMessage] = useState("");
 
   const targets = useMemo(() => macroTargets(weightKg, goal), [weightKg, goal]);
   const plan = dailyPlans[planIndex];
@@ -149,11 +171,7 @@ function App() {
   const newMealCalories = protein * 4 + carbs * 4 + fats * 9;
   const progressMeals = [...mealHistory, { day: "Today", calories: totals.calories, protein: totals.protein }];
   const maxCalories = Math.max(...progressMeals.map((entry) => entry.calories), targets.calories);
-  const workoutVolumes = trainingPlan.map((item) => ({
-    day: item.day,
-    title: item.title,
-    sets: Number.parseInt(item.volume, 10)
-  }));
+  const workoutVolumes = trainingPlan.map((item) => ({ day: item.day, title: item.title, sets: Number.parseInt(item.volume, 10) }));
   const maxSets = Math.max(...workoutVolumes.map((entry) => entry.sets));
   const macroCompletion = [
     { label: "Protein", value: totals.protein, target: targets.protein },
@@ -180,6 +198,27 @@ function App() {
       })
       .catch(() => setCurrentUser(""));
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setProfile(emptyProfile);
+      setProfileMessage("");
+      return;
+    }
+
+    const storedProfile = window.localStorage.getItem(profileKey(currentUser));
+    if (storedProfile) {
+      try {
+        const parsedProfile = JSON.parse(storedProfile) as UserProfile;
+        setProfile({ ...emptyProfile, ...parsedProfile });
+        if (parsedProfile.weight) {
+          setWeightKg(Number(parsedProfile.weight));
+        }
+      } catch {
+        setProfile(emptyProfile);
+      }
+    }
+  }, [currentUser]);
 
   function addMeal(event: FormEvent) {
     event.preventDefault();
@@ -218,6 +257,27 @@ function App() {
     showSection("training");
   }
 
+  function updateProfile(field: keyof UserProfile, value: string) {
+    setProfile((currentProfile) => ({ ...currentProfile, [field]: value }));
+    setProfileMessage("");
+
+    if (field === "weight" && value) {
+      setWeightKg(Number(value));
+    }
+  }
+
+  function saveProfile(event: FormEvent) {
+    event.preventDefault();
+
+    if (!currentUser) {
+      setProfileMessage("Create or sign in to an account before saving profile details.");
+      return;
+    }
+
+    window.localStorage.setItem(profileKey(currentUser), JSON.stringify(profile));
+    setProfileMessage("Profile saved for this user on the current browser.");
+  }
+
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
 
@@ -247,22 +307,11 @@ function App() {
 
     try {
       if (authMode === "signUp") {
-        await signUp({
-          username: authEmail,
-          password: authPassword,
-          options: {
-            userAttributes: {
-              email: authEmail
-            }
-          }
-        });
+        await signUp({ username: authEmail, password: authPassword, options: { userAttributes: { email: authEmail } } });
         setAuthMode("confirm");
         setAuthMessage("Account created. Check your email for the confirmation code.");
       } else if (authMode === "confirm") {
-        await confirmSignUp({
-          username: authEmail,
-          confirmationCode: authCode
-        });
+        await confirmSignUp({ username: authEmail, confirmationCode: authCode });
         setAuthMode("signIn");
         setAuthMessage("Email confirmed. Sign in to start saving your coaching profile.");
       } else {
@@ -299,60 +348,35 @@ function App() {
   return (
     <main className="app-shell">
       <aside className="side-nav" aria-label="Primary">
-        <div className="brand-mark">
-          <Leaf size={24} />
-          <span>VitalLift</span>
-        </div>
+        <div className="brand-mark"><Leaf size={24} /><span>VitalLift</span></div>
         <nav>
           <a className={activeSection === "today" ? "active" : ""} href="#today" onClick={() => setActiveSection("today")}><BarChart3 size={18} /> Today</a>
+          <a className={activeSection === "profile" ? "active" : ""} href="#profile" onClick={() => setActiveSection("profile")}><UserRound size={18} /> Profile</a>
           <a className={activeSection === "progress" ? "active" : ""} href="#progress" onClick={() => setActiveSection("progress")}><TrendingUp size={18} /> Progress</a>
           <a className={activeSection === "training" ? "active" : ""} href="#training" onClick={() => setActiveSection("training")}><Dumbbell size={18} /> Training</a>
           <a className={activeSection === "nutrition" ? "active" : ""} href="#nutrition" onClick={() => setActiveSection("nutrition")}><Utensils size={18} /> Nutrition</a>
           <a className={activeSection === "coach" ? "active" : ""} href="#coach" onClick={() => setActiveSection("coach")}><Sparkles size={18} /> Coach</a>
         </nav>
-        <div className="coach-note">
-          <Moon size={18} />
-          <p>Recovery target tonight</p>
-          <strong>7h 45m</strong>
-        </div>
+        <div className="coach-note"><Moon size={18} /><p>Recovery target tonight</p><strong>7h 45m</strong></div>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
-          <div>
-            <p className="eyebrow">Nutritional coaching workspace</p>
-            <h1>Build muscle, track macros, recover clean.</h1>
-          </div>
-          <button className="primary-action" type="button" onClick={generateNextPlan}>
-            <Sparkles size={18} />
-            Generate next plan
-          </button>
+          <div><p className="eyebrow">Nutritional coaching workspace</p><h1>Build muscle, track macros, recover clean.</h1></div>
+          <button className="primary-action" type="button" onClick={generateNextPlan}><Sparkles size={18} />Generate next plan</button>
         </header>
 
         <section id="today" className="hero-panel">
           <div className="hero-copy">
             <span className="date-chip"><CalendarDays size={16} /> {plan.chip}</span>
             <h2>{plan.title}</h2>
-            <p>
-              {plan.copy}
-            </p>
+            <p>{plan.copy}</p>
             <div className="hero-actions">
               <button type="button" onClick={adjustTargets}><Target size={17} /> Adjust targets</button>
-              <button className="ghost" type="button" onClick={startWorkout}>
-                <Timer size={17} /> {workoutStarted ? "Pause workout" : "Start workout"}
-              </button>
+              <button className="ghost" type="button" onClick={startWorkout}><Timer size={17} /> {workoutStarted ? "Pause workout" : "Start workout"}</button>
             </div>
           </div>
-          <div className="vital-orbit" aria-label="Daily readiness score">
-            <div className="score-ring">
-              <span>{Math.round(readiness)}%</span>
-              <small>Readiness</small>
-            </div>
-            <div className="metric-line">
-              <strong>{totals.calories}</strong>
-              <span>calories logged</span>
-            </div>
-          </div>
+          <div className="vital-orbit" aria-label="Daily readiness score"><div className="score-ring"><span>{Math.round(readiness)}%</span><small>Readiness</small></div><div className="metric-line"><strong>{totals.calories}</strong><span>calories logged</span></div></div>
         </section>
 
         <section className="metrics-grid" aria-label="Nutrition metrics">
@@ -363,249 +387,68 @@ function App() {
         </section>
 
         <section className="account-panel" aria-label="Account">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Account</p>
-              <h3>{currentUser ? "Profile connected" : authMode === "signUp" ? "Create your account" : authMode === "confirm" ? "Confirm email" : "Sign in"}</h3>
-            </div>
-            <Sparkles size={20} />
-          </div>
+          <div className="section-heading"><div><p className="eyebrow">Account</p><h3>{currentUser ? "Profile connected" : authMode === "signUp" ? "Create your account" : authMode === "confirm" ? "Confirm email" : "Sign in"}</h3></div><Sparkles size={20} /></div>
           {currentUser ? (
-            <div className="signed-in-row">
-              <div>
-                <strong>{currentUser}</strong>
-                <span>Meals, macros, and training history can be linked to this profile.</span>
-              </div>
-              <button type="button" onClick={handleSignOut}>Sign out</button>
-            </div>
+            <div className="signed-in-row"><div><strong>{currentUser}</strong><span>Meals, macros, and training history can be linked to this profile.</span></div><button type="button" onClick={handleSignOut}>Sign out</button></div>
           ) : (
             <form className="auth-form" onSubmit={handleAuth}>
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(event) => setAuthEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  required
-                />
-              </label>
-              {authMode !== "confirm" && (
-                <label>
-                  Password
-                  <input
-                    type="password"
-                    value={authPassword}
-                    onChange={(event) => setAuthPassword(event.target.value)}
-                    placeholder="Minimum 8 characters"
-                    autoComplete={authMode === "signUp" ? "new-password" : "current-password"}
-                    required
-                  />
-                </label>
-              )}
-              {authMode === "confirm" && (
-                <label>
-                  Confirmation code
-                  <input
-                    value={authCode}
-                    onChange={(event) => setAuthCode(event.target.value)}
-                    placeholder="123456"
-                    inputMode="numeric"
-                    required
-                  />
-                </label>
-              )}
-              <button type="submit" disabled={authBusy}>
-                <Sparkles size={17} />
-                {authBusy ? "Working..." : authMode === "signUp" ? "Create account" : authMode === "confirm" ? "Confirm account" : "Sign in"}
-              </button>
-              <div className="auth-switcher">
-                <button type="button" onClick={() => setAuthMode("signUp")}>Create account</button>
-                <button type="button" onClick={() => setAuthMode("signIn")}>Sign in</button>
-                <button type="button" onClick={() => setAuthMode("confirm")}>Confirm email</button>
-              </div>
+              <label>Email<input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" required /></label>
+              {authMode !== "confirm" && <label>Password<input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 8 characters" autoComplete={authMode === "signUp" ? "new-password" : "current-password"} required /></label>}
+              {authMode === "confirm" && <label>Confirmation code<input value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="123456" inputMode="numeric" required /></label>}
+              <button type="submit" disabled={authBusy}><Sparkles size={17} />{authBusy ? "Working..." : authMode === "signUp" ? "Create account" : authMode === "confirm" ? "Confirm account" : "Sign in"}</button>
+              <div className="auth-switcher"><button type="button" onClick={() => setAuthMode("signUp")}>Create account</button><button type="button" onClick={() => setAuthMode("signIn")}>Sign in</button><button type="button" onClick={() => setAuthMode("confirm")}>Confirm email</button></div>
             </form>
           )}
           {authMessage && <p className="auth-message">{authMessage}</p>}
         </section>
 
+        <section id="profile" className="profile-panel" aria-label="Registered user profile">
+          <div className="section-heading"><div><p className="eyebrow">Registered user</p><h3>User profile panel</h3></div><UserRound size={20} /></div>
+          {currentUser ? (
+            <>
+              <div className="profile-summary"><div className="profile-avatar"><UserRound size={24} /></div><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profile.weight || weightKg} kg · {profile.height || "Height not set"} cm</span></div></div>
+              <form className="profile-form" onSubmit={saveProfile}>
+                <label>Full name<input value={profile.fullName} onChange={(event) => updateProfile("fullName", event.target.value)} placeholder="e.g. Luis Santos" autoComplete="name" /></label>
+                <label>Date of birth<input type="date" value={profile.birthDate} onChange={(event) => updateProfile("birthDate", event.target.value)} /></label>
+                <label>Weight<input type="number" min={35} max={220} value={profile.weight} onChange={(event) => updateProfile("weight", event.target.value)} placeholder={`${weightKg}`} /></label>
+                <label>Height<input type="number" min={120} max={230} value={profile.height} onChange={(event) => updateProfile("height", event.target.value)} placeholder="175" /></label>
+                <label className="profile-location">Location<input value={profile.location} onChange={(event) => updateProfile("location", event.target.value)} placeholder="Mexico City, MX" autoComplete="address-level2" /></label>
+                <button type="submit"><Save size={17} />Save profile</button>
+              </form>
+              <div className="profile-facts" aria-label="Profile details"><ProfileFact icon={CalendarDays} label="Birth date" value={profile.birthDate || "Not set"} /><ProfileFact icon={Flame} label="Body weight" value={`${profile.weight || weightKg} kg`} /><ProfileFact icon={Ruler} label="Height" value={profile.height ? `${profile.height} cm` : "Not set"} /><ProfileFact icon={UserRound} label="Account" value={currentUser} /></div>
+            </>
+          ) : (
+            <div className="profile-empty"><UserRound size={22} /><div><strong>Create an account to unlock the profile panel.</strong><span>The panel stores name, date of birth, weight, height, and location for the signed-in user.</span></div></div>
+          )}
+          {profileMessage && <p className="auth-message">{profileMessage}</p>}
+        </section>
+
         <section id="progress" className="progress-panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Progress</p>
-              <h3>Meals and workouts</h3>
-            </div>
-            <TrendingUp size={20} />
-          </div>
-
+          <div className="section-heading"><div><p className="eyebrow">Progress</p><h3>Meals and workouts</h3></div><TrendingUp size={20} /></div>
           <div className="progress-grid">
-            <article className="progress-block">
-              <div className="chart-heading">
-                <strong>Calorie trend</strong>
-                <span>{Math.round((totals.calories / targets.calories) * 100)}% today</span>
-              </div>
-              <div className="bar-chart" aria-label="Calories by day">
-                {progressMeals.map((entry) => (
-                  <div className="bar-column" key={entry.day}>
-                    <span style={{ height: `${Math.max(12, (entry.calories / maxCalories) * 100)}%` }} />
-                    <small>{entry.day}</small>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="progress-block">
-              <div className="chart-heading">
-                <strong>Workout volume</strong>
-                <span>{workoutVolumes.reduce((sum, entry) => sum + entry.sets, 0)} weekly sets</span>
-              </div>
-              <div className="volume-list" aria-label="Workout sets by day">
-                {workoutVolumes.map((entry) => (
-                  <div className="volume-row" key={entry.day}>
-                    <span>{entry.day}</span>
-                    <div><i style={{ width: `${(entry.sets / maxSets) * 100}%` }} /></div>
-                    <strong>{entry.sets}</strong>
-                  </div>
-                ))}
-              </div>
-            </article>
+            <article className="progress-block"><div className="chart-heading"><strong>Calorie trend</strong><span>{Math.round((totals.calories / targets.calories) * 100)}% today</span></div><div className="bar-chart" aria-label="Calories by day">{progressMeals.map((entry) => <div className="bar-column" key={entry.day}><span style={{ height: `${Math.max(12, (entry.calories / maxCalories) * 100)}%` }} /><small>{entry.day}</small></div>)}</div></article>
+            <article className="progress-block"><div className="chart-heading"><strong>Workout volume</strong><span>{workoutVolumes.reduce((sum, entry) => sum + entry.sets, 0)} weekly sets</span></div><div className="volume-list" aria-label="Workout sets by day">{workoutVolumes.map((entry) => <div className="volume-row" key={entry.day}><span>{entry.day}</span><div><i style={{ width: `${(entry.sets / maxSets) * 100}%` }} /></div><strong>{entry.sets}</strong></div>)}</div></article>
           </div>
-
-          <div className="macro-progress-strip">
-            {macroCompletion.map((entry) => {
-              const progress = Math.min(100, Math.round((entry.value / entry.target) * 100));
-              return (
-                <article key={entry.label}>
-                  <div>
-                    <strong>{entry.label}</strong>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
-                </article>
-              );
-            })}
-          </div>
+          <div className="macro-progress-strip">{macroCompletion.map((entry) => { const progress = Math.min(100, Math.round((entry.value / entry.target) * 100)); return <article key={entry.label}><div><strong>{entry.label}</strong><span>{progress}%</span></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div></article>; })}</div>
         </section>
 
         <section className="two-column">
           <div id="nutrition" className="nutrition-panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Food record</p>
-                <h3>Macro log</h3>
-              </div>
-              <span>{meals.length} meals</span>
-            </div>
-
-            <form className="meal-form" onSubmit={addMeal}>
-              <label>
-                Meal
-                <input value={mealName} onChange={(event) => setMealName(event.target.value)} placeholder="e.g. Turkey rice bowl" />
-              </label>
-              <div className="macro-inputs">
-                <NumberField label="Protein" value={protein} setValue={setProtein} />
-                <NumberField label="Carbs" value={carbs} setValue={setCarbs} />
-                <NumberField label="Fats" value={fats} setValue={setFats} />
-              </div>
-              <button type="submit"><Plus size={17} /> Add meal</button>
-            </form>
-
-            <div className="meal-list">
-              {meals.map((meal) => (
-                <article key={meal.id} className="meal-row">
-                  <div>
-                    <strong>{meal.name}</strong>
-                    <span>{meal.protein}P / {meal.carbs}C / {meal.fats}F</span>
-                  </div>
-                  <p>{meal.calories} kcal</p>
-                </article>
-              ))}
-            </div>
+            <div className="section-heading"><div><p className="eyebrow">Food record</p><h3>Macro log</h3></div><span>{meals.length} meals</span></div>
+            <form className="meal-form" onSubmit={addMeal}><label>Meal<input value={mealName} onChange={(event) => setMealName(event.target.value)} placeholder="e.g. Turkey rice bowl" /></label><div className="macro-inputs"><NumberField label="Protein" value={protein} setValue={setProtein} /><NumberField label="Carbs" value={carbs} setValue={setCarbs} /><NumberField label="Fats" value={fats} setValue={setFats} /></div><button type="submit"><Plus size={17} /> Add meal</button></form>
+            <div className="meal-list">{meals.map((meal) => <article key={meal.id} className="meal-row"><div><strong>{meal.name}</strong><span>{meal.protein}P / {meal.carbs}C / {meal.fats}F</span></div><p>{meal.calories} kcal</p></article>)}</div>
           </div>
-
           <div id="training" className={`training-panel ${targetPulse ? "pulse-panel" : ""}`}>
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Weightlifting</p>
-                <h3>Training split</h3>
-              </div>
-              <TrendingUp size={20} />
-            </div>
-            {workoutStarted && (
-              <div className="workout-status">
-                <Timer size={18} />
-                <span>Workout active</span>
-                <strong>Upper Strength</strong>
-              </div>
-            )}
-            <div className="goal-controls">
-              <label>
-                Body weight
-                <input
-                  type="number"
-                  min={35}
-                  max={220}
-                  value={weightKg}
-                  onChange={(event) => setWeightKg(Number(event.target.value))}
-                />
-              </label>
-              <div className="segmented" aria-label="Goal">
-                {(["cut", "recompose", "bulk"] as Goal[]).map((item) => (
-                  <button
-                    key={item}
-                    className={goal === item ? "selected" : ""}
-                    onClick={() => {
-                      setGoal(item);
-                      setActiveSection("training");
-                    }}
-                    type="button"
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="training-list">
-              {trainingPlan.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <article key={item.day} className="training-row">
-                    <span>{item.day}</span>
-                    <Icon size={20} />
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.focus}</p>
-                    </div>
-                    <em>{item.volume}</em>
-                  </article>
-                );
-              })}
-            </div>
+            <div className="section-heading"><div><p className="eyebrow">Weightlifting</p><h3>Training split</h3></div><TrendingUp size={20} /></div>
+            {workoutStarted && <div className="workout-status"><Timer size={18} /><span>Workout active</span><strong>Upper Strength</strong></div>}
+            <div className="goal-controls"><label>Body weight<input type="number" min={35} max={220} value={weightKg} onChange={(event) => setWeightKg(Number(event.target.value))} /></label><div className="segmented" aria-label="Goal">{(["cut", "recompose", "bulk"] as Goal[]).map((item) => <button key={item} className={goal === item ? "selected" : ""} onClick={() => { setGoal(item); setActiveSection("training"); }} type="button">{item}</button>)}</div></div>
+            <div className="training-list">{trainingPlan.map((item) => { const Icon = item.icon; return <article key={item.day} className="training-row"><span>{item.day}</span><Icon size={20} /><div><strong>{item.title}</strong><p>{item.focus}</p></div><em>{item.volume}</em></article>; })}</div>
           </div>
         </section>
 
         <section id="coach" className="coach-panel">
-          <div>
-            <p className="eyebrow">Coach intelligence</p>
-            <h3>Next best actions</h3>
-          </div>
-          <div className="tip-grid">
-            {tips.map((tip, index) => (
-              <article
-                key={tip}
-                className={selectedTip === index ? "selected-tip" : ""}
-                onClick={() => {
-                  setSelectedTip(index);
-                  setActiveSection("coach");
-                }}
-              >
-                <Check size={18} />
-                <p>{tip}</p>
-                <ChevronRight size={17} />
-              </article>
-            ))}
-          </div>
+          <div><p className="eyebrow">Coach intelligence</p><h3>Next best actions</h3></div>
+          <div className="tip-grid">{tips.map((tip, index) => <article key={tip} className={selectedTip === index ? "selected-tip" : ""} onClick={() => { setSelectedTip(index); setActiveSection("coach"); }}><Check size={18} /><p>{tip}</p><ChevronRight size={17} /></article>)}</div>
           <p className="coach-selection">Selected focus: {tips[selectedTip]}</p>
         </section>
       </section>
@@ -615,26 +458,19 @@ function App() {
 
 function Macro({ label, value, target, unit, icon: Icon }: { label: string; value: number; target: number; unit: string; icon: typeof Activity }) {
   const progress = Math.min(100, Math.round((value / target) * 100));
-  return (
-    <article className="macro-card">
-      <div>
-        <Icon size={20} />
-        <span>{label}</span>
-      </div>
-      <strong>{value}<small>{unit}</small></strong>
-      <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
-      <p>{progress}% of {target}{unit}</p>
-    </article>
-  );
+  return <article className="macro-card"><div><Icon size={20} /><span>{label}</span></div><strong>{value}<small>{unit}</small></strong><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><p>{progress}% of {target}{unit}</p></article>;
 }
 
 function NumberField({ label, value, setValue }: { label: string; value: number; setValue: (value: number) => void }) {
-  return (
-    <label>
-      {label}
-      <input type="number" min={0} value={value} onChange={(event) => setValue(Number(event.target.value))} />
-    </label>
-  );
+  return <label>{label}<input type="number" min={0} value={value} onChange={(event) => setValue(Number(event.target.value))} /></label>;
+}
+
+function ProfileFact({ icon: Icon, label, value }: { icon: typeof Activity; label: string; value: string }) {
+  return <article><Icon size={18} /><div><span>{label}</span><strong>{value}</strong></div></article>;
+}
+
+function profileKey(user: string) {
+  return `${profileStoragePrefix}:${user.toLowerCase()}`;
 }
 
 export default App;
