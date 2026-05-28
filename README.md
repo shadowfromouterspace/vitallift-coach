@@ -29,6 +29,14 @@ Most fitness apps split the experience into too many places: one tool for workou
 | Coaching | Surfaces practical tips for recovery, nutrition, and training focus. |
 | Accounts | Supports local demo accounts now and real Cognito auth when AWS env vars are configured. |
 
+## Architecture
+
+VitalLift Coach is designed as a Vite frontend hosted by AWS Amplify, with Cognito for accounts and a serverless backend path through API Gateway, Lambda, and DynamoDB.
+
+Read the full architecture documentation and diagrams here:
+
+[docs/architecture.md](docs/architecture.md)
+
 ## Current Features
 
 - Premium React + Vite dashboard interface
@@ -130,6 +138,8 @@ VITE_COGNITO_USER_POOL_CLIENT_ID=<CognitoUserPoolClientId>
 ├── amplify.yml
 ├── backend/
 │   └── lambda/
+├── docs/
+│   └── architecture.md
 ├── infrastructure/
 │   └── template.yaml
 ├── src/
