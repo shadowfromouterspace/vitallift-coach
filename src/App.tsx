@@ -8,8 +8,11 @@ import {
   ChevronRight,
   Dumbbell,
   Flame,
+  HeartPulse,
   ImagePlus,
+  Info,
   Leaf,
+  LineChart,
   Moon,
   Plus,
   Ruler,
@@ -26,6 +29,7 @@ import {
 } from "lucide-react";
 import { confirmSignUp, getCurrentUser, signIn, signOut, signUp } from "aws-amplify/auth";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import aboutReference from "../docs/issue-assets/issue-8-about-reference.jpg";
 import { isAuthConfigured } from "./awsConfig";
 
 type Meal = {
@@ -39,7 +43,7 @@ type Meal = {
 
 type Goal = "cut" | "recompose" | "bulk";
 
-type Section = "today" | "profile" | "progress" | "training" | "nutrition" | "coach";
+type Section = "today" | "about" | "profile" | "progress" | "training" | "nutrition" | "coach";
 
 type AuthMode = "signIn" | "signUp" | "confirm";
 
@@ -86,6 +90,29 @@ const tips = [
   "Keep heavy compounds at RPE 7-9, then chase clean reps on accessories.",
   "Add 5-10 minutes of incline walking after lifting on lower-stress days.",
   "Sleep is part of the program: protect a fixed wind-down time tonight."
+];
+
+const valuePillars = [
+  {
+    icon: Salad,
+    title: "Nutrition coaching",
+    copy: "Plan meals around protein, calories, and macro balance instead of guessing."
+  },
+  {
+    icon: Dumbbell,
+    title: "Weightlifting support",
+    copy: "Pair training splits with the fuel and recovery rhythm needed to progress."
+  },
+  {
+    icon: LineChart,
+    title: "Progress insights",
+    copy: "See meal consistency, workout volume, and target completion in one workspace."
+  },
+  {
+    icon: UserRound,
+    title: "Personalized profile",
+    copy: "Connect account details, body metrics, and local profile data to tune the plan."
+  }
 ];
 
 const dailyPlans = [
@@ -441,6 +468,7 @@ function App() {
         <div className="brand-mark"><Leaf size={24} /><span>VitalLift</span></div>
         <nav>
           <a className={activeSection === "today" ? "active" : ""} href="#today" onClick={() => setActiveSection("today")}><BarChart3 size={18} /> Today</a>
+          <a className={activeSection === "about" ? "active" : ""} href="#about" onClick={() => setActiveSection("about")}><Info size={18} /> About</a>
           <a className={activeSection === "profile" ? "active" : ""} href="#profile" onClick={() => setActiveSection("profile")}><UserRound size={18} /> Profile</a>
           <a className={activeSection === "progress" ? "active" : ""} href="#progress" onClick={() => setActiveSection("progress")}><TrendingUp size={18} /> Progress</a>
           <a className={activeSection === "training" ? "active" : ""} href="#training" onClick={() => setActiveSection("training")}><Dumbbell size={18} /> Training</a>
@@ -474,6 +502,44 @@ function App() {
           <Macro label="Carbs" value={totals.carbs} target={targets.carbs} unit="g" icon={Apple} />
           <Macro label="Fats" value={totals.fats} target={targets.fats} unit="g" icon={Salad} />
           <Macro label="Calories" value={totals.calories} target={targets.calories} unit="kcal" icon={Flame} />
+        </section>
+
+        <section id="about" className="about-panel" aria-label="About VitalLift Coach">
+          <div className="about-copy">
+            <p className="eyebrow">About VitalLift Coach</p>
+            <h3>One workspace for lifting, meals, macros, and recovery decisions.</h3>
+            <p>
+              VitalLift turns daily nutrition and training inputs into a clear coaching flow: log food, tune targets, follow the split, and watch progress move.
+            </p>
+            <div className="about-actions" aria-label="About section quick links">
+              <button type="button" onClick={() => showSection("nutrition")}><Utensils size={17} /> Log meals</button>
+              <button type="button" onClick={() => showSection("training")}><Dumbbell size={17} /> View split</button>
+            </div>
+          </div>
+          <div className="about-visual" aria-label="VitalLift product value preview">
+            <img src={aboutReference} alt="Reference layout for explaining VitalLift Coach value" />
+            <div className="about-insight">
+              <HeartPulse size={19} />
+              <div>
+                <strong>{Math.round(readiness)}% readiness</strong>
+                <span>{Math.round((totals.protein / targets.protein) * 100)}% protein target today</span>
+              </div>
+            </div>
+          </div>
+          <div className="value-grid">
+            {valuePillars.map((pillar) => {
+              const Icon = pillar.icon;
+              return (
+                <article key={pillar.title}>
+                  <Icon size={19} />
+                  <div>
+                    <strong>{pillar.title}</strong>
+                    <span>{pillar.copy}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </section>
 
         <section className={`account-panel ${authTransition}`} aria-label="Account">
