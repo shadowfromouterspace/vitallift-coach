@@ -41,6 +41,8 @@ type Section = "today" | "profile" | "progress" | "training" | "nutrition" | "co
 
 type AuthMode = "signIn" | "signUp" | "confirm";
 
+type ProfileAlertStatus = "idle" | "saved" | "warning";
+
 type UserProfile = {
   fullName: string;
   birthDate: string;
@@ -150,6 +152,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState("");
   const [profile, setProfile] = useState<UserProfile>(emptyProfile);
   const [profileMessage, setProfileMessage] = useState("");
+  const [profileAlertStatus, setProfileAlertStatus] = useState<ProfileAlertStatus>("idle");
 
   const targets = useMemo(() => macroTargets(weightKg, goal), [weightKg, goal]);
   const plan = dailyPlans[planIndex];
@@ -205,6 +208,7 @@ function App() {
     if (!currentUser) {
       setProfile(emptyProfile);
       setProfileMessage("");
+      setProfileAlertStatus("idle");
       return;
     }
 
@@ -212,6 +216,7 @@ function App() {
     if (!storedProfile) {
       setProfile(emptyProfile);
       setProfileMessage("");
+      setProfileAlertStatus("idle");
       return;
     }
 
@@ -219,6 +224,7 @@ function App() {
       const parsedProfile = JSON.parse(storedProfile) as UserProfile;
       setProfile({ ...emptyProfile, ...parsedProfile });
       setProfileMessage("");
+      setProfileAlertStatus("idle");
 
       if (parsedProfile.weight) {
         setWeightKg(Number(parsedProfile.weight));
@@ -226,6 +232,7 @@ function App() {
     } catch {
       setProfile(emptyProfile);
       setProfileMessage("Profile data was reset because the saved local record could not be read.");
+      setProfileAlertStatus("warning");
     }
   }, [currentUser]);
 
@@ -276,7 +283,8 @@ function App() {
 
       return nextProfile;
     });
-    setProfileMessage("");
+    setProfileMessage("Profile changes saved locally for this user.");
+    setProfileAlertStatus("saved");
 
     if (field === "weight" && Number(value) > 0) {
       setWeightKg(Number(value));
@@ -293,6 +301,7 @@ function App() {
 
     window.localStorage.setItem(profileKey(currentUser), JSON.stringify(profile));
     setProfileMessage("Profile saved for this user on the current browser.");
+    setProfileAlertStatus("saved");
   }
 
   async function handleAuth(event: FormEvent) {
@@ -353,6 +362,7 @@ function App() {
       setCurrentUser("");
       setProfile(emptyProfile);
       setProfileMessage("");
+      setProfileAlertStatus("idle");
       setAuthMode("signIn");
       setAuthMessage("Signed out from the local demo account.");
       return;
@@ -362,6 +372,7 @@ function App() {
     setCurrentUser("");
     setProfile(emptyProfile);
     setProfileMessage("");
+    setProfileAlertStatus("idle");
     setAuthMode("signIn");
     setAuthMessage("Signed out.");
   }
@@ -428,6 +439,7 @@ function App() {
           {currentUser ? (
             <>
               <div className="profile-summary"><div className="profile-avatar"><UserRound size={24} /></div><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profileWeight} · {profileHeight}</span></div></div>
+              <ProfileAlert status={profileAlertStatus} message={profileMessage} />
               <form className="profile-form" onSubmit={saveProfile}>
                 <label>Full name<input value={profile.fullName} onChange={(event) => updateProfile("fullName", event.target.value)} placeholder="e.g. Luis Santos" autoComplete="name" /></label>
                 <label>Date of birth<input type="date" value={profile.birthDate} onChange={(event) => updateProfile("birthDate", event.target.value)} /></label>
@@ -441,7 +453,6 @@ function App() {
           ) : (
             <div className="profile-empty"><UserRound size={22} /><div><strong>Create an account to unlock the profile panel.</strong><span>The panel stores name, date of birth, weight, height, and location for the signed-in user.</span></div></div>
           )}
-          {profileMessage && <p className="auth-message">{profileMessage}</p>}
         </section>
 
         <section id="progress" className="progress-panel">
@@ -488,6 +499,21 @@ function NumberField({ label, value, setValue }: { label: string; value: number;
 
 function ProfileFact({ icon: Icon, label, value }: { icon: typeof Activity; label: string; value: string }) {
   return <article><Icon size={18} /><div><span>{label}</span><strong>{value}</strong></div></article>;
+}
+
+function ProfileAlert({ status, message }: { status: ProfileAlertStatus; message: string }) {
+  const visibleMessage = message || "Profile changes will appear here as you update the user panel.";
+  const title = status === "warning" ? "Profile attention needed" : status === "saved" ? "Profile updated" : "Profile ready";
+
+  return (
+    <div className={`profile-alert ${status}`} role="status" aria-live="polite">
+      <Check size={18} />
+      <div>
+        <strong>{title}</strong>
+        <span>{visibleMessage}</span>
+      </div>
+    </div>
+  );
 }
 
 function profileKey(user: string) {
