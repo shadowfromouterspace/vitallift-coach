@@ -123,6 +123,7 @@ h3 { font-size: 1.35rem; margin-bottom: 0; }
 .training-panel,
 .coach-panel,
 .account-panel,
+.about-panel,
 .profile-panel,
 .progress-panel { border-radius: 8px; background: rgba(255,255,250,.8); border: 1px solid rgba(37,58,45,.1); box-shadow: 0 14px 38px rgba(36,54,44,.08); }
 .macro-card { padding: 18px; }
@@ -137,14 +138,94 @@ h3 { font-size: 1.35rem; margin-bottom: 0; }
 .training-panel,
 .coach-panel,
 .account-panel,
+.about-panel,
 .profile-panel,
 .progress-panel { padding: 22px; }
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
 .section-heading > span { color: #56705f; font-weight: 800; }
 .meal-form { display: grid; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid rgba(33,50,40,.1); }
 .account-panel,
+.about-panel,
 .profile-panel,
 .progress-panel { margin-bottom: 18px; }
+
+.about-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(300px, .78fr);
+  gap: 18px;
+  align-items: stretch;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255,255,250,.9), rgba(239,247,232,.86)),
+    radial-gradient(circle at 100% 0%, rgba(244,195,107,.22), transparent 32%);
+}
+.about-copy { min-height: 310px; display: flex; flex-direction: column; justify-content: center; }
+.about-copy h3 { max-width: 720px; font-size: clamp(1.7rem, 3vw, 3.35rem); line-height: 1; letter-spacing: 0; }
+.about-copy p:not(.eyebrow) { max-width: 640px; color: #52665b; line-height: 1.7; font-size: 1rem; }
+.about-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.about-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #20352b;
+  color: #f8fff8;
+  font-weight: 820;
+  transition: transform 180ms ease, background 180ms ease;
+}
+.about-actions button:last-child { background: #e3ebdc; color: #315c43; }
+.about-actions button:hover { transform: translateY(-2px); }
+.about-visual {
+  position: relative;
+  min-height: 310px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #dfe9d8;
+  border: 1px solid rgba(33,50,40,.1);
+}
+.about-visual img { width: 100%; height: 100%; display: block; object-fit: cover; filter: saturate(.94) contrast(.98); }
+.about-visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 44%, rgba(22,39,30,.74)); pointer-events: none; }
+.about-insight {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(248,255,248,.92);
+  color: #20352b;
+  box-shadow: 0 16px 28px rgba(20,35,28,.18);
+}
+.about-insight svg { color: #ad6718; flex: 0 0 auto; }
+.about-insight strong,
+.about-insight span { display: block; }
+.about-insight span { margin-top: 3px; color: #637269; font-size: .86rem; }
+.value-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.value-grid article {
+  min-height: 116px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fbfcf7;
+  border: 1px solid rgba(33,50,40,.09);
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+.value-grid article:hover { transform: translateY(-3px); border-color: rgba(45,122,76,.28); }
+.value-grid svg { color: #2d7a4c; flex: 0 0 auto; }
+.value-grid strong,
+.value-grid span { display: block; }
+.value-grid strong { color: #1b2922; }
+.value-grid span { margin-top: 6px; color: #637269; line-height: 1.45; font-size: .9rem; }
 
 .account-panel { position: relative; overflow: hidden; }
 .account-panel::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(110deg, transparent 0 34%, rgba(154,196,106,.18) 48%, transparent 64%); transform: translateX(-36%); }
@@ -287,10 +368,12 @@ input:focus { border-color: #2d7a4c; box-shadow: 0 0 0 4px rgba(45,122,76,.11); 
   .coach-note { display: none; }
   .hero-panel,
   .two-column,
+  .about-panel,
   .progress-grid { grid-template-columns: 1fr; }
   .vital-orbit { justify-self: start; }
   .metrics-grid,
   .tip-grid,
+  .value-grid,
   .profile-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile-location { grid-column: auto; }
@@ -304,10 +387,14 @@ input:focus { border-color: #2d7a4c; box-shadow: 0 0 0 4px rgba(45,122,76,.11); 
   .side-nav nav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .side-nav a { min-height: 58px; justify-content: center; flex-direction: column; gap: 5px; padding: 8px 4px; font-size: .78rem; }
   .hero-panel { padding: 24px; background: linear-gradient(105deg, rgba(19,45,34,.96), rgba(19,45,34,.84)); background-size: cover; background-position: center; }
+  .about-panel { padding: 18px; }
+  .about-copy { min-height: auto; }
+  .about-visual { min-height: 260px; }
   h1 { font-size: clamp(2rem, 13vw, 3rem); }
   h2 { font-size: 2rem; line-height: 1.02; }
   .metrics-grid,
   .tip-grid,
+  .value-grid,
   .macro-progress-strip,
   .macro-inputs,
   .goal-controls,
