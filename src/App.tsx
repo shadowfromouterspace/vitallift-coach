@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Dumbbell,
   Flame,
+  ImagePlus,
   Leaf,
   Moon,
   Plus,
@@ -18,12 +19,13 @@ import {
   Target,
   Timer,
   TrendingUp,
+  Trash2,
   Utensils,
   UserRound,
   Waves
 } from "lucide-react";
 import { confirmSignUp, getCurrentUser, signIn, signOut, signUp } from "aws-amplify/auth";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { isAuthConfigured } from "./awsConfig";
 
 type Meal = {
@@ -49,6 +51,7 @@ type UserProfile = {
   weight: string;
   height: string;
   location: string;
+  avatar: string;
 };
 
 const localAccountKey = "vitallift-local-account";
@@ -59,7 +62,8 @@ const emptyProfile: UserProfile = {
   birthDate: "",
   weight: "",
   height: "",
-  location: ""
+  location: "",
+  avatar: ""
 };
 
 const initialMeals: Meal[] = [
@@ -291,6 +295,37 @@ function App() {
     }
   }
 
+  async function updateAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setProfileMessage("Choose an image file for the profile picture.");
+      setProfileAlertStatus("warning");
+      return;
+    }
+
+    try {
+      const avatar = await resizeProfileImage(file);
+      updateProfile("avatar", avatar);
+      setProfileMessage("Profile picture updated locally for this user.");
+      setProfileAlertStatus("saved");
+    } catch {
+      setProfileMessage("The profile picture could not be processed. Try a smaller image.");
+      setProfileAlertStatus("warning");
+    }
+  }
+
+  function removeAvatar() {
+    updateProfile("avatar", "");
+    setProfileMessage("Profile picture removed for this user.");
+    setProfileAlertStatus("saved");
+  }
+
   function saveProfile(event: FormEvent) {
     event.preventDefault();
 
@@ -438,7 +473,24 @@ function App() {
           <div className="section-heading"><div><p className="eyebrow">Registered user</p><h3>User profile panel</h3></div><UserRound size={20} /></div>
           {currentUser ? (
             <>
-              <div className="profile-summary"><div className="profile-avatar"><UserRound size={24} /></div><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profileWeight} · {profileHeight}</span></div></div>
+              <div className="profile-summary"><ProfileAvatar avatar={profile.avatar} name={profile.fullName || currentUser} /><div><strong>{profile.fullName || currentUser}</strong><span>{profile.location || "Location not set"} · {profileWeight} · {profileHeight}</span></div></div>
+              <div className="avatar-editor">
+                <ProfileAvatar avatar={profile.avatar} name={profile.fullName || currentUser} size="large" />
+                <div className="avatar-actions">
+                  <div>
+                    <strong>Profile picture</strong>
+                    <span>{profile.avatar ? "Custom photo saved for this browser profile." : "Add a personal photo to make the account feel yours."}</span>
+                  </div>
+                  <div className="avatar-buttons">
+                    <label className="avatar-upload-button">
+                      <ImagePlus size={17} />
+                      Choose photo
+                      <input className="visually-hidden" type="file" accept="image/*" onChange={updateAvatar} />
+                    </label>
+                    {profile.avatar && <button className="avatar-remove-button" type="button" onClick={removeAvatar}><Trash2 size={16} />Remove</button>}
+                  </div>
+                </div>
+              </div>
               <ProfileAlert status={profileAlertStatus} message={profileMessage} />
               <form className="profile-form" onSubmit={saveProfile}>
                 <label>Full name<input value={profile.fullName} onChange={(event) => updateProfile("fullName", event.target.value)} placeholder="e.g. Luis Santos" autoComplete="name" /></label>
@@ -501,6 +553,21 @@ function ProfileFact({ icon: Icon, label, value }: { icon: typeof Activity; labe
   return <article><Icon size={18} /><div><span>{label}</span><strong>{value}</strong></div></article>;
 }
 
+function ProfileAvatar({ avatar, name, size = "compact" }: { avatar: string; name: string; size?: "compact" | "large" }) {
+  const initials = name
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <div className={`profile-avatar ${size}`}>
+      {avatar ? <img src={avatar} alt={`${name} profile`} /> : <span>{initials || <UserRound size={size === "large" ? 34 : 24} />}</span>}
+    </div>
+  );
+}
+
 function ProfileAlert({ status, message }: { status: ProfileAlertStatus; message: string }) {
   const visibleMessage = message || "Profile changes will appear here as you update the user panel.";
   const title = status === "warning" ? "Profile attention needed" : status === "saved" ? "Profile updated" : "Profile ready";
@@ -518,6 +585,40 @@ function ProfileAlert({ status, message }: { status: ProfileAlertStatus; message
 
 function profileKey(user: string) {
   return `${profileStoragePrefix}:${user.toLowerCase()}`;
+}
+
+function resizeProfileImage(file: File) {
+  const maxSide = 420;
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Unable to read image."));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("Unable to load image."));
+      image.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          reject(new Error("Canvas is unavailable."));
+          return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        context.fillStyle = "#f8fff8";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 export default App;
