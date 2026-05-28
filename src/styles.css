@@ -146,6 +146,17 @@ h3 { font-size: 1.35rem; margin-bottom: 0; }
 .profile-panel,
 .progress-panel { margin-bottom: 18px; }
 
+.account-panel { position: relative; overflow: hidden; }
+.account-panel::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(110deg, transparent 0 34%, rgba(154,196,106,.18) 48%, transparent 64%); transform: translateX(-36%); }
+.account-panel.signing-in::after,
+.account-panel.signing-out::after { animation: accountSheen 820ms ease both; }
+.account-body { min-height: 44px; }
+.account-panel.signing-in .account-body { animation: accountEnter 640ms cubic-bezier(.2,.8,.2,1) both; }
+.account-panel.signing-out .account-body { animation: accountExit 420ms cubic-bezier(.2,.8,.2,1) both; }
+.auth-transition-banner { position: absolute; top: 18px; right: 56px; min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border-radius: 999px; background: #20352b; color: #f8fff8; font-size: .8rem; font-weight: 850; box-shadow: 0 14px 28px rgba(31,111,69,.16); z-index: 2; animation: authBadgeIn 640ms cubic-bezier(.2,.8,.2,1) both; }
+.auth-transition-banner.signing-out { background: #eef7e8; color: #315c43; border: 1px solid rgba(31,111,69,.18); }
+.auth-transition-banner svg { flex: 0 0 auto; }
+
 .profile-summary { min-height: 76px; display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 16px; border-radius: 8px; background: linear-gradient(135deg, #20352b, #315c43); color: #f8fff8; }
 .profile-avatar { width: 48px; height: 48px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: rgba(255,255,255,.14); color: #d9f2df; flex: 0 0 auto; }
 .profile-avatar.large { width: 108px; height: 108px; background: linear-gradient(135deg, #20352b, #1f6f45); color: #f8fff8; box-shadow: 0 16px 34px rgba(31,111,69,.18); }
@@ -264,6 +275,10 @@ input:focus { border-color: #2d7a4c; box-shadow: 0 0 0 4px rgba(45,122,76,.11); 
 @keyframes riseIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
 @keyframes targetPulse { 0% { box-shadow: 0 14px 38px rgba(36,54,44,.08); } 45% { box-shadow: 0 0 0 5px rgba(45,122,76,.18), 0 20px 48px rgba(45,122,76,.16); } 100% { box-shadow: 0 14px 38px rgba(36,54,44,.08); } }
+@keyframes accountEnter { 0% { opacity: 0; transform: translateY(12px) scale(.985); filter: blur(4px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+@keyframes accountExit { 0% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } 100% { opacity: .12; transform: translateY(-10px) scale(.985); filter: blur(4px); } }
+@keyframes authBadgeIn { 0% { opacity: 0; transform: translateY(-8px) scale(.96); } 18% { opacity: 1; } 70% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@keyframes accountSheen { 0% { opacity: 0; transform: translateX(-36%); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(42%); } }
 
 @media (max-width: 1040px) {
   .app-shell { grid-template-columns: 1fr; }
@@ -284,6 +299,7 @@ input:focus { border-color: #2d7a4c; box-shadow: 0 0 0 4px rgba(45,122,76,.11); 
 @media (max-width: 700px) {
   .workspace { padding: 18px; }
   .topbar { align-items: stretch; flex-direction: column; }
+  .auth-transition-banner { position: static; width: fit-content; margin: -4px 0 14px; }
   .side-nav { gap: 14px; }
   .side-nav nav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .side-nav a { min-height: 58px; justify-content: center; flex-direction: column; gap: 5px; padding: 8px 4px; font-size: .78rem; }
